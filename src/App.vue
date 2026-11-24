@@ -48,6 +48,18 @@ const visiblePins = computed(() => wiringPins.filter(pin =>
   (pin.pin + ' ' + pin.name + ' ' + pin.wire).toLowerCase().includes(pinSearch.value.toLowerCase())
 ))
 const activePin = computed(() => wiringPins.find(pin => pin.pin === selectedPin.value) || wiringPins[0])
+
+const diagnosticScenario = ref('normal')
+const diagnosticScenarios = [
+  { id: 'normal', label: 'NORMAL', title: 'Sistem dalam kondisi normal', rpm: 1500, map: 38, tps: 12, temp: 86, voltage: 13.9, ckp: 'SIGNAL OK', faults: [], summary: 'Semua parameter contoh berada pada rentang simulasi normal.' },
+  { id: 'map', label: 'MAP FAULT', title: 'Simulasi gangguan sensor MAP', rpm: 1500, map: 0, tps: 12, temp: 86, voltage: 13.9, ckp: 'SIGNAL OK', faults: [{ code: 'P0107', title: 'MAP circuit low input', system: 'INTAKE', severity: 'WARNING' }], summary: 'Contoh pembelajaran: sinyal MAP dibuat terlalu rendah.' },
+  { id: 'tps', label: 'TPS FAULT', title: 'Simulasi gangguan sensor TPS', rpm: 1500, map: 38, tps: 0, temp: 86, voltage: 13.9, ckp: 'SIGNAL OK', faults: [{ code: 'P0122', title: 'Throttle position sensor low input', system: 'THROTTLE', severity: 'WARNING' }], summary: 'Contoh pembelajaran: sinyal TPS dibuat rendah untuk menunjukkan bagaimana DTC dapat muncul.' },
+  { id: 'ckp', label: 'CKP FAULT', title: 'Simulasi gangguan sinyal CKP', rpm: 0, map: 38, tps: 12, temp: 86, voltage: 13.9, ckp: 'NO SIGNAL', faults: [{ code: 'P0335', title: 'Crankshaft position sensor circuit', system: 'IGNITION', severity: 'WARNING' }], summary: 'Contoh pembelajaran: sinyal CKP tidak tersedia sehingga simulasi RPM menjadi nol.' },
+  { id: 'voltage', label: 'LOW VOLTAGE', title: 'Simulasi tegangan rendah', rpm: 900, map: 35, tps: 8, temp: 84, voltage: 10.8, ckp: 'SIGNAL OK', faults: [{ code: 'P0562', title: 'System voltage low', system: 'POWER', severity: 'WARNING' }], summary: 'Contoh pembelajaran: tegangan sistem dibuat rendah.' },
+]
+const activeDiagnostic = computed(() => diagnosticScenarios.find(item => item.id === diagnosticScenario.value) || diagnosticScenarios[0])
+function setDiagnosticScenario(id) { diagnosticScenario.value = id }
+
 function runContinuityDemo() {
   continuityRunning.value = true
   window.setTimeout(() => { continuityRunning.value = false }, 1800)
@@ -247,12 +259,12 @@ onBeforeUnmount(disposeScene)
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark"><span class="brand-pulse"></span>N</div><div><strong>NADI</strong><small>AUTOMOTIVE INTELLIGENCE</small></div></div>
       <div class="side-label">WORKSPACE</div>
-      <button class="nav-item active" @click="activeSection = 'overview'"><span class="nav-icon">⌘</span><span>Overview</span><kbd>01</kbd></button>
-      <button class="nav-item" @click="activeSection = 'ecu-lab'"><span class="nav-icon">◈</span><span>3D ECU Lab</span><kbd>02</kbd></button>
-      <button class="nav-item" @click="activeSection = 'diagnostics'"><span class="nav-icon">⌁</span><span>Diagnostics</span><kbd>03</kbd></button>
-      <button class="nav-item" @click="activeSection = 'wiring'"><span class="nav-icon">⌘</span><span>Wiring Lab</span><kbd>04</kbd></button>
+      <button class="nav-item" :class="{ active: activeSection === 'overview' }" @click="activeSection = 'overview'"><span class="nav-icon">⌘</span><span>Overview</span><kbd>01</kbd></button>
+      <button class="nav-item" :class="{ active: activeSection === 'ecu-lab' }" @click="activeSection = 'ecu-lab'"><span class="nav-icon">◈</span><span>3D ECU Lab</span><kbd>02</kbd></button>
+      <button class="nav-item" :class="{ active: activeSection === 'diagnostics' }" @click="activeSection = 'diagnostics'"><span class="nav-icon">⌁</span><span>Diagnostics</span><kbd>03</kbd></button>
+      <button class="nav-item" :class="{ active: activeSection === 'wiring' }" @click="activeSection = 'wiring'"><span class="nav-icon">⌘</span><span>Wiring Lab</span><kbd>04</kbd></button>
       <div class="side-label side-label-spaced">KNOWLEDGE</div>
-      <button class="nav-item" @click="activeSection = 'library'"><span class="nav-icon">▤</span><span>Learning Library</span><kbd>05</kbd></button>
+      <button class="nav-item" :class="{ active: activeSection === 'library' }" @click="activeSection = 'library'"><span class="nav-icon">▤</span><span>Learning Library</span><kbd>05</kbd></button>
       <div class="sidebar-bottom"><div class="connection-card"><span class="status-dot"></span><div><strong>CORE ONLINE</strong><small>Local simulation mode</small></div></div><div class="profile"><div class="avatar">AG</div><div><strong>AB GARAGE</strong><small>Workshop workspace</small></div><span class="more">···</span></div></div>
     </aside>
     <main class="main-content">
@@ -293,6 +305,27 @@ onBeforeUnmount(disposeScene)
           </div>
           <div class="data-disclaimer">CATATAN KESELAMATAN · Selalu gunakan diagram servis resmi sesuai merek, model, tahun, dan kode ECU kendaraan. Jangan menghubungkan pin berdasarkan contoh ini.</div>
         </div>
+      </section>
+      <section v-else-if="activeSection === 'diagnostics'" class="diagnostic-page">
+        <div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> SENSOR ANALYSIS ENVIRONMENT <span class="eyebrow-tag">SIMULATION</span></div><h1>Diagnostic <span>Center</span></h1><p>Pelajari hubungan data sensor, kondisi mesin, dan contoh diagnostic trouble code.</p></div><div class="heading-meta"><span>MODE</span><strong>OFFLINE SIMULATOR</strong><span class="meta-live"><i></i> EDUCATIONAL DATA</span></div></div>
+        <div class="diagnostic-scenarios panel"><div class="panel-header"><div><div class="panel-kicker">FAULT SCENARIO SELECTOR</div><h2>Pilih skenario pembelajaran</h2><p>Ubah kondisi simulasi untuk melihat perubahan parameter dan DTC.</p></div><span class="live-pill">● INTERACTIVE</span></div><div class="scenario-buttons"><button v-for="scenario in diagnosticScenarios" :key="scenario.id" :class="{ active: diagnosticScenario === scenario.id }" @click="setDiagnosticScenario(scenario.id)">{{ scenario.label }}</button></div></div>
+        <div class="diagnostic-status panel"><div><span class="panel-kicker">CURRENT SCENARIO</span><h2>{{ activeDiagnostic.title }}</h2><p>{{ activeDiagnostic.summary }}</p></div><span :class="['scenario-state', activeDiagnostic.faults.length ? 'fault' : 'healthy']">{{ activeDiagnostic.faults.length ? 'FAULT DEMO' : 'NORMAL DEMO' }}</span></div>
+        <div class="sensor-grid">
+          <article class="sensor-card panel"><div class="sensor-card-head"><span>ENGINE SPEED</span><b>RPM</b></div><strong>{{ activeDiagnostic.rpm.toLocaleString('id-ID') }} <small>rpm</small></strong><div class="sensor-meter"><i :style="{ width: Math.min(activeDiagnostic.rpm / 6000 * 100, 100) + '%' }"></i></div><span class="sensor-caption">Simulated crankshaft speed</span></article>
+          <article class="sensor-card panel"><div class="sensor-card-head"><span>MAP SENSOR</span><b>kPa</b></div><strong>{{ activeDiagnostic.map }} <small>kPa</small></strong><div class="sensor-meter"><i :style="{ width: Math.min(activeDiagnostic.map, 100) + '%' }"></i></div><span class="sensor-caption">Manifold absolute pressure</span></article>
+          <article class="sensor-card panel"><div class="sensor-card-head"><span>TPS SENSOR</span><b>%</b></div><strong>{{ activeDiagnostic.tps }} <small>%</small></strong><div class="sensor-meter"><i :style="{ width: activeDiagnostic.tps + '%' }"></i></div><span class="sensor-caption">Throttle position example</span></article>
+          <article class="sensor-card panel"><div class="sensor-card-head"><span>ENGINE TEMP</span><b>°C</b></div><strong>{{ activeDiagnostic.temp }} <small>°C</small></strong><div class="sensor-meter"><i :style="{ width: activeDiagnostic.temp / 130 * 100 + '%' }"></i></div><span class="sensor-caption">Coolant temperature example</span></article>
+          <article class="sensor-card panel"><div class="sensor-card-head"><span>BATTERY VOLTAGE</span><b>V DC</b></div><strong>{{ activeDiagnostic.voltage.toFixed(1) }} <small>V</small></strong><div class="sensor-meter"><i :style="{ width: activeDiagnostic.voltage / 16 * 100 + '%' }"></i></div><span class="sensor-caption">Illustrative supply reading</span></article>
+          <article class="sensor-card panel"><div class="sensor-card-head"><span>CKP SIGNAL</span><b>INPUT</b></div><strong :class="{ 'sensor-alert': activeDiagnostic.ckp === 'NO SIGNAL' }">{{ activeDiagnostic.ckp }}</strong><div class="sensor-meter"><i :style="{ width: activeDiagnostic.ckp === 'NO SIGNAL' ? '0%' : '82%' }"></i></div><span class="sensor-caption">Crankshaft position signal state</span></article>
+        </div>
+        <div class="diagnostic-bottom">
+          <div class="panel diagnostic-codes"><div class="panel-header"><div><div class="panel-kicker">ACTIVE DEMO CODES</div><h2>Diagnostic Trouble Codes</h2><p>Kode contoh berdasarkan skenario yang dipilih.</p></div><span class="code-count">{{ activeDiagnostic.faults.length }} CODE</span></div>
+            <div v-if="activeDiagnostic.faults.length" class="demo-code-list"><div v-for="fault in activeDiagnostic.faults" :key="fault.code" class="demo-code-row"><strong>{{ fault.code }}</strong><div><b>{{ fault.title }}</b><small>{{ fault.system }}</small></div><span class="severity warning">{{ fault.severity }}</span></div></div>
+            <div v-else class="diagnostic-clear"><span>✓</span><div><strong>Tidak ada DTC pada skenario ini</strong><small>Ini hanya status simulasi, bukan hasil pemindaian kendaraan.</small></div></div>
+          </div>
+          <div class="panel learning-tip"><div class="panel-kicker">LEARNING NOTE</div><h2>Bagaimana membaca data?</h2><p>Bandingkan nilai sensor pada skenario normal dan gangguan. DTC adalah petunjuk awal, bukan bukti tunggal bahwa sebuah komponen pasti rusak.</p><ul><li>Periksa definisi kode sesuai pabrikan.</li><li>Bandingkan data dengan spesifikasi servis kendaraan.</li><li>Gunakan prosedur yang sesuai bersama teknisi berpengalaman.</li></ul></div>
+        </div>
+        <div class="data-disclaimer">SIMULATED DATA ONLY · NOT CONNECTED TO OBD / ECU · VALUES AND DTC DEFINITIONS MAY VARY BY VEHICLE MANUFACTURER</div>
       </section>
       <div v-else>
       <section class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> AUTOMOTIVE CONTROL ENVIRONMENT <span class="eyebrow-tag">BETA 1.0</span></div><h1>ECU <span>Intelligence</span> Lab</h1><p>Explore the electronic nervous system behind modern vehicles.</p></div><div class="heading-meta"><span>SESSION ID</span><strong>NADI-ECU-0426</strong><span class="meta-live"><i></i> LIVE ENVIRONMENT</span></div></section>
