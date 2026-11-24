@@ -11,6 +11,7 @@ const vehicleType = ref('MOTORCYCLE')
 const isLive = ref(true)
 const showLabels = ref(true)
 const sceneReady = ref(false)
+const sceneError = ref(false)
 const dtcFilter = ref('all')
 
 const parts = [
@@ -139,6 +140,8 @@ function addConnector(position, label) {
 }
 function buildScene() {
   if (!mountPoint.value) return
+  sceneError.value = false
+  try {
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0x050b13)
   scene.fog = new THREE.FogExp2(0x050b13, 0.055)
@@ -204,6 +207,12 @@ function buildScene() {
   resizeObserver.observe(mountPoint.value)
   sceneReady.value = true
   animate()
+  } catch (error) {
+    console.warn('NADI 3D renderer unavailable; showing interactive fallback model.', error)
+    disposeScene()
+    sceneError.value = true
+    sceneReady.value = true
+  }
 }
 function onSceneClick(event) {
   const rect = renderer.domElement.getBoundingClientRect()
@@ -350,7 +359,15 @@ onBeforeUnmount(disposeScene)
       <section class="workspace-grid">
         <div class="visual-panel panel">
           <div class="panel-header"><div><div class="panel-kicker">INTERACTIVE MODEL <span class="live-pill">● LIVE</span></div><h2>ECU Circuit Visualization</h2><p>Explore nodes and signal pathways in a conceptual ECU system.</p></div><div class="panel-controls"><button :class="{ selected: vehicleType === 'MOTORCYCLE' }" @click="vehicleType = 'MOTORCYCLE'">MOTORCYCLE</button><button :class="{ selected: vehicleType === 'AUTOMOTIVE' }" @click="vehicleType = 'AUTOMOTIVE'">AUTOMOTIVE</button></div></div>
-          <div class="scene-wrap"><div ref="mountPoint" class="three-canvas"></div><div class="scene-hud hud-top-left"><span>MODEL / {{ vehicleType }}</span><strong>ECU NETWORK <i>●</i></strong></div><div class="scene-hud hud-top-right"><span>RENDER ENGINE</span><strong>THREE.JS / WEBGL</strong></div><div class="scene-bottom"><span><i class="pulse-dot"></i> SIGNAL FLOW ACTIVE</span><span>DRAG TO ORBIT · SCROLL TO ZOOM</span></div><div v-if="!sceneReady" class="scene-loading">INITIALIZING 3D CORE...</div></div>
+          <div class="scene-wrap"><div ref="mountPoint" class="three-canvas"></div>
+            <div v-if="sceneError" class="model-fallback">
+              <div class="fallback-path path-one"></div><div class="fallback-path path-two"></div><div class="fallback-path path-three"></div>
+              <button v-for="part in parts" :key="part.id" class="fallback-node" :class="['node-' + part.id, { active: selectedPart === part.id }]" @click="selectPart(part.id)">
+                <span>{{ part.short }}</span><small>{{ part.type }}</small>
+              </button>
+              <div class="fallback-caption">2D INTERACTIVE MODEL · WEBGL NOT AVAILABLE</div>
+            </div>
+            <div class="scene-hud hud-top-left"><span>MODEL / {{ vehicleType }}</span><strong>ECU NETWORK <i>●</i></strong></div><div class="scene-hud hud-top-right"><span>RENDER ENGINE</span><strong>THREE.JS / WEBGL</strong></div><div class="scene-bottom"><span><i class="pulse-dot"></i> SIGNAL FLOW ACTIVE</span><span>DRAG TO ORBIT · SCROLL TO ZOOM</span></div><div v-if="!sceneReady" class="scene-loading">INITIALIZING 3D CORE...</div></div>
           <div class="scene-toolbar"><div class="toolbar-legend"><span><i class="legend-input"></i> INPUT SENSOR</span><span><i class="legend-output"></i> OUTPUT ACTUATOR</span><span><i class="legend-power"></i> POWER</span></div><div class="toolbar-actions"><button @click="showLabels = !showLabels">{{ showLabels ? 'HIDE LABELS' : 'SHOW LABELS' }}</button><button @click="resetView">↺ RESET VIEW</button></div></div>
         </div>
         <div class="inspector-column">
