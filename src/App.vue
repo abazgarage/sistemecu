@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import * as THREE from 'three'
+import LearningLibrary from './LearningLibrary.vue'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 const mountPoint = ref(null)
@@ -269,7 +270,8 @@ onBeforeUnmount(disposeScene)
     </aside>
     <main class="main-content">
       <header class="topbar"><div class="breadcrumb"><span>WORKSPACE</span><b>/</b><strong>{{ activeSection.replace('-', ' ').toUpperCase() }}</strong></div><div class="top-actions"><span class="clock-dot"></span><span class="top-status">SYSTEM NOMINAL</span><span class="top-divider"></span><button class="icon-button" title="Notifications">♧</button><div class="user-mini">AG</div></div></header>
-      <section v-if="activeSection === 'wiring'" class="wiring-page">
+      <LearningLibrary v-if="activeSection === 'library'" />
+      <section v-else-if="activeSection === 'wiring'" class="wiring-page">
         <div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> HARNESS ARCHITECTURE <span class="eyebrow-tag">LEARNING MODE</span></div><h1>Wiring <span>Lab</span></h1><p>Telusuri fungsi pin, kelompok kabel, dan arah sinyal dalam diagram ECU konseptual.</p></div></div>
         <div class="wiring-layout">
           <div class="panel wiring-map">
