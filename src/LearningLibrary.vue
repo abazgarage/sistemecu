@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const category = ref('ALL')
 const search = ref('')
@@ -7,6 +7,64 @@ const selectedId = ref('ecu')
 const completed = ref([])
 
 const categories = ['ALL', 'FUNDAMENTAL', 'SENSOR', 'ACTUATOR', 'DIAGNOSTIC']
+
+const quizBank = {
+  ecu: [
+    { question: 'Apa fungsi utama ECU pada sistem manajemen mesin?', options: ['Menyimpan bahan bakar', 'Mengolah masukan sensor dan mengendalikan aktuator', 'Mengisi baterai kendaraan', 'Menggerakkan roda secara langsung'], answer: 1, explanation: 'ECU memproses informasi dari sensor sesuai program kontrol, kemudian mengatur keluaran ke aktuator.' },
+    { question: 'Urutan kerja sistem kontrol yang paling tepat adalah ...', options: ['Aktuator → sensor → ECU', 'ECU → sensor → baterai', 'Sensor → ECU → aktuator', 'Baterai → aktuator → sensor'], answer: 2, explanation: 'Sensor menyediakan masukan, ECU mengolahnya, dan aktuator menjalankan perintah kontrol.' }
+  ],
+  map: [
+    { question: 'Apa yang diukur oleh sensor MAP?', options: ['Tekanan absolut di intake manifold', 'Suhu oli transmisi', 'Kecepatan roda', 'Level bahan bakar'], answer: 0, explanation: 'MAP adalah Manifold Absolute Pressure, yaitu pengukuran tekanan absolut di intake manifold.' },
+    { question: 'Kode gangguan MAP selalu membuktikan sensornya rusak. Pernyataan ini ...', options: ['Benar untuk semua kendaraan', 'Salah, rangkaian dan kondisi intake juga perlu diperiksa', 'Benar jika mesin dingin', 'Tidak perlu diagnosis lanjutan'], answer: 1, explanation: 'Konektor, kabel, referensi tegangan, ground, kebocoran intake, dan ECU dapat memengaruhi sinyal.' }
+  ],
+  tps: [
+    { question: 'Informasi utama yang diberikan TPS adalah ...', options: ['Tekanan oli', 'Posisi atau sudut throttle', 'Suhu radiator', 'Tekanan ban'], answer: 1, explanation: 'TPS memberikan informasi posisi throttle kepada sistem kontrol mesin.' },
+    { question: 'Nilai tegangan TPS harus dibandingkan dengan ...', options: ['Angka universal semua kendaraan', 'Warna kabel saja', 'Spesifikasi servis kendaraan terkait', 'Tegangan lampu utama'], answer: 2, explanation: 'Karakteristik sensor dan rentang sinyal berbeda menurut desain kendaraan.' }
+  ],
+  ckp: [
+    { question: 'Sensor CKP memberikan informasi tentang ...', options: ['Posisi dan kecepatan poros engkol', 'Ketinggian bahan bakar', 'Tekanan ban', 'Suhu kabin'], answer: 0, explanation: 'CKP membantu sistem mengetahui posisi dan kecepatan putaran poros engkol.' },
+    { question: 'Mengapa tipe sensor CKP perlu diketahui sebelum pemeriksaan?', options: ['Semua CKP memiliki sinyal sama', 'Jenis induktif dan Hall memiliki karakteristik berbeda', 'Agar warna kabel cocok', 'Supaya tidak perlu data servis'], answer: 1, explanation: 'Sensor induktif dan Hall dapat berbeda dalam bentuk sinyal dan kebutuhan kelistrikan.' }
+  ],
+  injector: [
+    { question: 'Fuel injector termasuk komponen ...', options: ['Sensor suhu', 'Aktuator', 'Filter udara', 'Pengaman mekanis'], answer: 1, explanation: 'Injektor menerima perintah kendali dan mengatur penyaluran bahan bakar.' },
+    { question: 'Strategi pengaktifan injektor ditentukan dengan mempertimbangkan ...', options: ['Masukan sensor dan kalibrasi sistem', 'Warna bodi kendaraan', 'Ukuran ban saja', 'Tingkat kecerahan lampu'], answer: 0, explanation: 'ECU mengatur injektor berdasarkan berbagai masukan, kondisi operasi, dan kalibrasi.' }
+  ],
+  dtc: [
+    { question: 'Apa arti DTC dalam diagnosis kendaraan?', options: ['Data Tekanan Cairan', 'Diagnostic Trouble Code', 'Digital Throttle Control', 'Drive Torque Calculation'], answer: 1, explanation: 'DTC adalah kode gangguan diagnostik yang disimpan saat kriteria pemantauan tertentu terpenuhi.' },
+    { question: 'Apa langkah yang tepat setelah menemukan DTC?', options: ['Langsung mengganti komponen', 'Mengabaikan gejala', 'Memeriksa data, kondisi, dan prosedur servis terkait', 'Menghapus kode tanpa pemeriksaan'], answer: 2, explanation: 'DTC adalah petunjuk awal. Penyebabnya perlu dikonfirmasi dengan data dan pemeriksaan yang sesuai.' }
+  ]
+}
+const quizIndex = ref(0)
+const quizChoice = ref(null)
+const quizSubmitted = ref(false)
+const quizResults = ref({})
+const currentQuiz = computed(() => (quizBank[selectedId.value] || [])[quizIndex.value])
+const currentQuizKey = computed(() => selectedId.value + '-' + quizIndex.value)
+const quizCorrectCount = computed(() => (quizBank[selectedId.value] || []).filter((_, index) => quizResults.value[selectedId.value + '-' + index] === true).length)
+const quizComplete = computed(() => quizIndex.value >= (quizBank[selectedId.value] || []).length)
+function submitQuizAnswer() {
+  if (quizChoice.value === null || !currentQuiz.value) return
+  quizResults.value = { ...quizResults.value, [currentQuizKey.value]: quizChoice.value === currentQuiz.value.answer }
+  quizSubmitted.value = true
+}
+function nextQuizQuestion() {
+  if (quizIndex.value < (quizBank[selectedId.value] || []).length - 1) {
+    quizIndex.value++
+    quizChoice.value = null
+    quizSubmitted.value = false
+  } else {
+    quizIndex.value++
+  }
+}
+function restartQuiz() {
+  const next = { ...quizResults.value }
+  Object.keys(next).filter(key => key.startsWith(selectedId.value + '-')).forEach(key => delete next[key])
+  quizResults.value = next
+  quizIndex.value = 0
+  quizChoice.value = null
+  quizSubmitted.value = false
+}
+
 const lessons = [
   {
     id: 'ecu', category: 'FUNDAMENTAL', level: 'DASAR', duration: '6 MENIT',
@@ -83,6 +141,13 @@ const visibleLessons = computed(() => lessons.filter(item =>
 const currentLesson = computed(() => lessons.find(item => item.id === selectedId.value) || lessons[0])
 const progress = computed(() => Math.round(completed.value.length / lessons.length * 100))
 
+
+watch(selectedId, () => {
+  quizIndex.value = 0
+  quizChoice.value = null
+  quizSubmitted.value = false
+})
+
 function toggleComplete(id) {
   completed.value = completed.value.includes(id)
     ? completed.value.filter(item => item !== id)
@@ -133,6 +198,31 @@ function toggleComplete(id) {
           <span class="lesson-index">0{{ index + 1 }}</span><div><h3>{{ section[0] }}</h3><p>{{ section[1] }}</p></div>
         </div>
         <div class="lesson-takeaway"><span>KEY TAKEAWAY</span><p>{{ currentLesson.takeaway }}</p></div>
+
+        <section v-if="currentQuiz && !quizComplete" class="quiz-panel">
+          <div class="quiz-top"><div><div class="panel-kicker">KNOWLEDGE CHECK</div><h3>Uji pemahaman</h3></div><span>SOAL {{ quizIndex + 1 }} / {{ quizBank[selectedId].length }}</span></div>
+          <div class="quiz-progress"><i :style="{ width: ((quizIndex + 1) / quizBank[selectedId].length * 100) + '%' }"></i></div>
+          <p class="quiz-question">{{ currentQuiz.question }}</p>
+          <div class="quiz-options">
+            <button v-for="(option, index) in currentQuiz.options" :key="option" class="quiz-option" :class="{ chosen: quizChoice === index, correct: quizSubmitted && index === currentQuiz.answer, incorrect: quizSubmitted && quizChoice === index && index !== currentQuiz.answer }" :disabled="quizSubmitted" @click="quizChoice = index">
+              <span>{{ String.fromCharCode(65 + index) }}</span>{{ option }}
+            </button>
+          </div>
+          <div v-if="quizSubmitted" class="quiz-feedback" :class="{ good: quizChoice === currentQuiz.answer }">
+            <strong>{{ quizChoice === currentQuiz.answer ? 'BENAR!' : 'BELUM TEPAT' }}</strong>
+            <p>{{ currentQuiz.explanation }}</p>
+          </div>
+          <div class="quiz-actions">
+            <span class="quiz-score">BENAR: {{ quizCorrectCount }} / {{ quizBank[selectedId].length }}</span>
+            <button v-if="!quizSubmitted" class="quiz-submit" :disabled="quizChoice === null" @click="submitQuizAnswer">PERIKSA JAWABAN</button>
+            <button v-else class="quiz-submit" @click="nextQuizQuestion">{{ quizIndex === quizBank[selectedId].length - 1 ? 'LIHAT HASIL' : 'SOAL BERIKUTNYA →' }}</button>
+          </div>
+        </section>
+        <section v-else-if="quizComplete" class="quiz-result">
+          <div class="panel-kicker">QUIZ COMPLETED</div><h3>{{ quizCorrectCount }} / {{ quizBank[selectedId].length }} JAWABAN BENAR</h3>
+          <p>Nilai latihan: <strong>{{ Math.round(quizCorrectCount / quizBank[selectedId].length * 100) }}</strong></p>
+          <button class="quiz-submit" @click="restartQuiz">ULANGI LATIHAN</button>
+        </section>
         <button class="lesson-complete" :class="{ completed: completed.includes(currentLesson.id) }" @click="toggleComplete(currentLesson.id)">{{ completed.includes(currentLesson.id) ? '✓ MATERI SUDAH SELESAI — BATALKAN' : 'TANDAI MATERI SELESAI' }}</button>
         <div class="data-disclaimer">MATERI EDUKASI UMUM · SPESIFIKASI DAN PROSEDUR DAPAT BERBEDA MENURUT MEREK, MODEL, TAHUN, DAN VARIAN KENDARAAN.</div>
       </article>
