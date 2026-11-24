@@ -27,6 +27,32 @@ const dtcs = [
 ]
 const filteredDtcs = computed(() => dtcFilter.value === 'all' ? dtcs : dtcs.filter(item => item.severity.toLowerCase() === dtcFilter.value))
 const selected = computed(() => parts.find(part => part.id === selectedPart.value) || parts[0])
+const pinSearch = ref('')
+const selectedPin = ref('A1')
+const wiringMode = ref('all')
+const continuityRunning = ref(false)
+const wiringPins = [
+  { pin: 'A1', name: 'Sensor Ground', wire: 'Hitam', color: '#aab4bd', group: 'GROUND', direction: 'INPUT', note: 'Referensi ground sensor pada diagram pembelajaran.' },
+  { pin: 'A2', name: '5V Reference', wire: 'Merah', color: '#f05b62', group: 'POWER', direction: 'OUTPUT', note: 'Referensi tegangan sensor 5 V konseptual.' },
+  { pin: 'A3', name: 'MAP Signal', wire: 'Hijau', color: '#54d69b', group: 'SENSOR', direction: 'INPUT', note: 'Sinyal analog dari sensor tekanan manifold.' },
+  { pin: 'A4', name: 'TPS Signal', wire: 'Kuning', color: '#e8c65d', group: 'SENSOR', direction: 'INPUT', note: 'Sinyal posisi throttle untuk simulasi pembelajaran.' },
+  { pin: 'B1', name: 'CKP Signal +', wire: 'Biru', color: '#55aef2', group: 'SENSOR', direction: 'INPUT', note: 'Masukan sinyal posisi poros engkol.' },
+  { pin: 'B2', name: 'CKP Signal -', wire: 'Putih', color: '#e2e9ed', group: 'SENSOR', direction: 'INPUT', note: 'Jalur pasangan sinyal CKP pada contoh konseptual.' },
+  { pin: 'B3', name: 'Injector Control', wire: 'Oranye', color: '#f39a54', group: 'ACTUATOR', direction: 'OUTPUT', note: 'Keluaran kendali injektor pada diagram simulasi.' },
+  { pin: 'B4', name: 'Main Power', wire: 'Merah', color: '#f05b62', group: 'POWER', direction: 'POWER', note: 'Catu daya modul pada contoh edukasi.' },
+  { pin: 'C1', name: 'Chassis Ground', wire: 'Hitam', color: '#aab4bd', group: 'GROUND', direction: 'GROUND', note: 'Referensi ground rangkaian.' },
+  { pin: 'C2', name: 'Ignition Status', wire: 'Ungu', color: '#bd8cf2', group: 'CONTROL', direction: 'INPUT', note: 'Status kunci kontak dalam model pembelajaran.' },
+]
+const visiblePins = computed(() => wiringPins.filter(pin =>
+  (wiringMode.value === 'all' || pin.group === wiringMode.value) &&
+  (pin.pin + ' ' + pin.name + ' ' + pin.wire).toLowerCase().includes(pinSearch.value.toLowerCase())
+))
+const activePin = computed(() => wiringPins.find(pin => pin.pin === selectedPin.value) || wiringPins[0])
+function runContinuityDemo() {
+  continuityRunning.value = true
+  window.setTimeout(() => { continuityRunning.value = false }, 1800)
+}
+
 
 let renderer, scene, camera, controls, animationId, raycaster, pointer, boardGroup, resizeObserver
 const interactiveMeshes = []
@@ -231,6 +257,44 @@ onBeforeUnmount(disposeScene)
     </aside>
     <main class="main-content">
       <header class="topbar"><div class="breadcrumb"><span>WORKSPACE</span><b>/</b><strong>{{ activeSection.replace('-', ' ').toUpperCase() }}</strong></div><div class="top-actions"><span class="clock-dot"></span><span class="top-status">SYSTEM NOMINAL</span><span class="top-divider"></span><button class="icon-button" title="Notifications">♧</button><div class="user-mini">AG</div></div></header>
+      <section v-if="activeSection === 'wiring'" class="wiring-page">
+        <div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> HARNESS ARCHITECTURE <span class="eyebrow-tag">LEARNING MODE</span></div><h1>Wiring <span>Lab</span></h1><p>Telusuri fungsi pin, kelompok kabel, dan arah sinyal dalam diagram ECU konseptual.</p></div></div>
+        <div class="wiring-layout">
+          <div class="panel wiring-map">
+            <div class="panel-header"><div><div class="panel-kicker">ECU CONNECTOR MAP</div><h2>Modul konektor 3 × 4</h2><p>Pilih pin untuk melihat fungsi dan arah sinyalnya.</p></div><span class="live-pill">● INTERACTIVE</span></div>
+            <div class="connector-board">
+              <div class="connector-title"><span>FRONT VIEW / SIMULATED</span><span>J-ECU-01</span></div>
+              <div class="pin-grid">
+                <button v-for="pin in wiringPins" :key="pin.pin" :class="{ chosen: selectedPin === pin.pin }" @click="selectedPin = pin.pin">
+                  <i :style="{ background: pin.color }"></i><strong>{{ pin.pin }}</strong><small>{{ pin.name }}</small>
+                </button>
+                <div v-for="n in 2" :key="'empty'+n" class="pin-empty"><span>—</span><small>RESERVED</small></div>
+              </div>
+              <div class="connector-foot"><span>PINOUT DEMO</span><span>12 POSITIONS · 10 DEFINED</span></div>
+            </div>
+            <div class="wire-legend"><span><i style="background:#54d69b"></i> SENSOR</span><span><i style="background:#f39a54"></i> ACTUATOR</span><span><i style="background:#f05b62"></i> POWER</span><span><i style="background:#aab4bd"></i> GROUND</span></div>
+          </div>
+          <div class="panel pin-inspector">
+            <div class="panel-kicker">PIN INSPECTOR</div><div class="pin-heading"><div class="pin-number">{{ activePin.pin }}</div><div><span>{{ activePin.group }} / {{ activePin.direction }}</span><h2>{{ activePin.name }}</h2></div></div>
+            <div class="pin-detail"><span>WIRE COLOR</span><strong><i :style="{ background: activePin.color }"></i>{{ activePin.wire }}</strong></div>
+            <div class="pin-detail"><span>PIN IDENTIFIER</span><strong>{{ activePin.pin }}</strong></div>
+            <p class="component-description">{{ activePin.note }}</p>
+            <div class="inspector-note">ⓘ Pinout ini adalah contoh edukasi, bukan pinout universal kendaraan.</div>
+            <button class="continuity-button" :disabled="continuityRunning" @click="runContinuityDemo">{{ continuityRunning ? 'MENJALANKAN SIMULASI...' : '▶ SIMULASI KONTINUITAS' }}</button>
+            <div v-if="continuityRunning" class="continuity-result">SIMULASI: jalur {{ activePin.pin }} sedang diperiksa...</div>
+          </div>
+        </div>
+        <div class="panel pin-table-panel">
+          <div class="panel-header"><div><div class="panel-kicker">PIN DIRECTORY</div><h2>Daftar pin dan fungsi</h2></div><input v-model="pinSearch" class="pin-search" placeholder="Cari pin / fungsi / warna..." /></div>
+          <div class="pin-filters"><button v-for="filter in ['all','SENSOR','ACTUATOR','POWER','GROUND','CONTROL']" :key="filter" :class="{ active: wiringMode === filter }" @click="wiringMode = filter">{{ filter.toUpperCase() }}</button></div>
+          <div class="pin-table"><div class="pin-table-head"><span>PIN</span><span>FUNGSI</span><span>WARNA KABEL</span><span>KELOMPOK</span><span>ARAH</span></div>
+            <button v-for="pin in visiblePins" :key="pin.pin" class="pin-table-row" :class="{ chosen: selectedPin === pin.pin }" @click="selectedPin = pin.pin"><strong>{{ pin.pin }}</strong><span>{{ pin.name }}</span><span><i :style="{ background: pin.color }"></i>{{ pin.wire }}</span><span>{{ pin.group }}</span><span>{{ pin.direction }}</span></button>
+            <div v-if="!visiblePins.length" class="empty-state">Tidak ada pin yang cocok.</div>
+          </div>
+          <div class="data-disclaimer">CATATAN KESELAMATAN · Selalu gunakan diagram servis resmi sesuai merek, model, tahun, dan kode ECU kendaraan. Jangan menghubungkan pin berdasarkan contoh ini.</div>
+        </div>
+      </section>
+      <div v-else>
       <section class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> AUTOMOTIVE CONTROL ENVIRONMENT <span class="eyebrow-tag">BETA 1.0</span></div><h1>ECU <span>Intelligence</span> Lab</h1><p>Explore the electronic nervous system behind modern vehicles.</p></div><div class="heading-meta"><span>SESSION ID</span><strong>NADI-ECU-0426</strong><span class="meta-live"><i></i> LIVE ENVIRONMENT</span></div></section>
       <section class="metrics-grid">
         <article class="metric-card"><div class="metric-top"><span>CONTROL MODULE</span><span class="metric-symbol">◈</span></div><strong>01 <small>UNIT</small></strong><div class="metric-foot"><i></i> ECU CORE ACTIVE</div></article>
@@ -254,6 +318,7 @@ onBeforeUnmount(disposeScene)
         <div class="panel quick-panel"><div class="panel-kicker">QUICK ACCESS</div><h2>Explore the system</h2><button @click="activeSection = 'library'"><span>▤</span><div><strong>Learning Library</strong><small>ECU fundamentals and components</small></div><b>↗</b></button><button @click="activeSection = 'wiring'"><span>⌘</span><div><strong>Wiring Reference</strong><small>Conceptual signal architecture</small></div><b>↗</b></button><button @click="activeSection = 'diagnostics'"><span>⌁</span><div><strong>Diagnostic Center</strong><small>Sample fault-code explorer</small></div><b>↗</b></button></div>
       </section>
       <footer><span>© 2026 NADI — AUTOMOTIVE INTELLIGENCE</span><span>BUILT FOR LEARNING <b>·</b> POWERED BY VUE 3 + THREE.JS</span></footer>
+      </div>
     </main>
   </div>
 </template>
