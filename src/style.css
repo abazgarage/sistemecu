@@ -59,3 +59,19 @@
 .lesson-reader .data-disclaimer{line-height:1.7;margin-top:14px}
 @media(max-width:850px){.library-layout{grid-template-columns:1fr}.lesson-list{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-reader{min-height:0}}
 @media(max-width:560px){.library-toolbar{align-items:stretch;flex-direction:column}.library-search{width:100%}.lesson-list{grid-template-columns:1fr}.lesson-reader{padding:16px}.lesson-reader-head h2{font-size:17px}.library-filters button{padding:7px 8px}}
+
+
+/* Interactive model fallback for browsers without WebGL */
+.model-fallback{position:absolute;inset:0;overflow:hidden;background:radial-gradient(ellipse at center,rgba(15,92,111,.2),transparent 68%);z-index:1}
+.fallback-node{position:absolute;z-index:2;min-width:92px;padding:10px 12px;border:1px solid rgba(72,217,244,.4);background:rgba(8,26,38,.94);color:#d9f4fa;display:grid;gap:5px;text-align:center;box-shadow:0 0 18px rgba(24,179,207,.12);transform:translate(-50%,-50%)}
+.fallback-node span{font:600 12px var(--mono);color:var(--cyan)}
+.fallback-node small{font:7px var(--mono);color:#829eaa}
+.fallback-node.active{border-color:#55e0b2;box-shadow:0 0 22px rgba(85,224,178,.28);background:rgba(12,52,55,.96)}
+.node-ecu{left:50%;top:49%;min-width:132px;padding:17px 12px}
+.node-map{left:19%;top:25%}.node-tps{left:20%;top:73%}
+.node-injector{left:81%;top:25%}.node-ckp{left:80%;top:73%}.node-power{left:50%;top:17%}
+.fallback-path{position:absolute;height:2px;transform-origin:left center;background:linear-gradient(90deg,rgba(72,217,244,.1),rgba(72,217,244,.8),rgba(85,224,178,.1));box-shadow:0 0 9px rgba(72,217,244,.4);z-index:0}
+.path-one{left:23%;top:29%;width:29%;transform:rotate(17deg)}
+.path-two{left:23%;top:69%;width:29%;transform:rotate(-17deg)}
+.path-three{left:51%;top:51%;width:32%;transform:rotate(-18deg)}
+.fallback-caption{position:absolute;bottom:38px;left:0;right:0;text-align:center;color:#6f9aa8;font:8px var(--mono);letter-spacing:.1em}
