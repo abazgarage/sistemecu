@@ -30,6 +30,7 @@ const selected = computed(() => parts.find(part => part.id === selectedPart.valu
 
 let renderer, scene, camera, controls, animationId, raycaster, pointer, boardGroup, resizeObserver
 const interactiveMeshes = []
+const signalParticles = []
 
 function createTextSprite(text) {
   const canvas = document.createElement('canvas')
@@ -66,8 +67,36 @@ function addPart(id, label, position, size, color = 0x17465a) {
 }
 function createCircuitPath(points, color = 0x23d9f5) {
   const curve = new THREE.CatmullRomCurve3(points.map(point => new THREE.Vector3(...point)))
-  boardGroup.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.012, 6, false), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.75 })))
+  boardGroup.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.012, 6, false), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.82 })))
   boardGroup.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.035, 6, false), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.12 })))
+  const particle = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), new THREE.MeshBasicMaterial({ color }))
+  boardGroup.add(particle)
+  signalParticles.push({ curve, particle, offset: Math.random() })
+}
+function addConnector(position, label) {
+  const group = new THREE.Group()
+  group.position.set(...position)
+  const housing = new THREE.Mesh(
+    new THREE.BoxGeometry(0.52, 0.24, 0.38),
+    new THREE.MeshStandardMaterial({ color: 0x182d37, metalness: 0.35, roughness: 0.5, emissive: 0x062b39, emissiveIntensity: 0.35 })
+  )
+  group.add(housing)
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 5; col++) {
+      const pin = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 0.13, 8),
+        new THREE.MeshStandardMaterial({ color: 0xc5a96b, metalness: 0.85, roughness: 0.25, emissive: 0x59451d, emissiveIntensity: 0.2 })
+      )
+      pin.rotation.x = Math.PI / 2
+      pin.position.set(-0.18 + col * 0.09, -0.025 + row * 0.09, 0.2)
+      group.add(pin)
+    }
+  }
+  boardGroup.add(group)
+  const tag = createTextSprite(label)
+  tag.scale.set(0.75, 0.19, 1)
+  tag.position.set(position[0], position[1] + 0.24, position[2])
+  boardGroup.add(tag)
 }
 function buildScene() {
   if (!mountPoint.value) return
@@ -119,6 +148,9 @@ function buildScene() {
   createCircuitPath([[-1.45, -0.16, -0.38], [-0.95, -0.02, -0.28], [-0.55, 0.12, -0.1], [-0.1, 0.15, 0]])
   createCircuitPath([[0.62, 0.15, 0.18], [1.0, 0.1, 0.25], [1.45, 0.22, 0.42]], 0x48e6bd)
   createCircuitPath([[0.62, 0.1, -0.1], [1.0, -0.08, -0.25], [1.48, -0.14, -0.38]], 0xf3bd5c)
+  createConnector([-2.02, 0.12, -0.92], 'J1 / SENSOR')
+  createConnector([2.0, 0.12, 0.92], 'J2 / OUTPUT')
+  createConnector([0.05, 0.12, -1.02], 'J3 / POWER')
   const grid = new THREE.GridHelper(14, 42, 0x0b6178, 0x123140)
   grid.position.y = -1.15
   scene.add(grid)
@@ -150,7 +182,13 @@ function onResize() {
 }
 function animate() {
   animationId = requestAnimationFrame(animate)
-  if (boardGroup && isLive.value) boardGroup.rotation.y = Math.sin(performance.now() * 0.00018) * 0.07
+  if (boardGroup && isLive.value) {
+    boardGroup.rotation.y = Math.sin(performance.now() * 0.00018) * 0.07
+    const time = performance.now() * 0.00022
+    signalParticles.forEach(({ curve, particle, offset }) => {
+      particle.position.copy(curve.getPoint((time + offset) % 1))
+    })
+  }
   if (controls) controls.update()
   if (renderer && scene && camera) renderer.render(scene, camera)
 }
@@ -171,6 +209,7 @@ function disposeScene() {
     if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => { if (material.map) material.map.dispose(); material.dispose() })
   })
   interactiveMeshes.length = 0
+  signalParticles.length = 0
   renderer = scene = camera = controls = boardGroup = null
 }
 onMounted(buildScene)
