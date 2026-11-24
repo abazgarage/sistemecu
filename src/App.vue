@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 const mountPoint = ref(null)
 const activeSection = ref('overview')
@@ -27,7 +28,7 @@ const dtcs = [
 const filteredDtcs = computed(() => dtcFilter.value === 'all' ? dtcs : dtcs.filter(item => item.severity.toLowerCase() === dtcFilter.value))
 const selected = computed(() => parts.find(part => part.id === selectedPart.value) || parts[0])
 
-let renderer, scene, camera, animationId, raycaster, pointer, boardGroup, resizeObserver
+let renderer, scene, camera, controls, animationId, raycaster, pointer, boardGroup, resizeObserver
 const interactiveMeshes = []
 
 function createTextSprite(text) {
@@ -82,6 +83,12 @@ function buildScene() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.2
   mountPoint.value.appendChild(renderer.domElement)
+  controls = new OrbitControls(camera, renderer.domElement)
+  controls.enableDamping = true
+  controls.dampingFactor = 0.06
+  controls.minDistance = 3.2
+  controls.maxDistance = 10
+  controls.maxPolarAngle = Math.PI * 0.49
   scene.add(new THREE.AmbientLight(0x80cce8, 1.35))
   const keyLight = new THREE.DirectionalLight(0x8deaff, 2.6)
   keyLight.position.set(3, 5, 4)
@@ -94,7 +101,9 @@ function buildScene() {
   const board = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.16, 2.7), new THREE.MeshStandardMaterial({ color: 0x0a202b, metalness: 0.52, roughness: 0.38, emissive: 0x062b39, emissiveIntensity: 0.55 }))
   board.position.y = -0.12
   boardGroup.add(board)
-  boardGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(board.geometry), new THREE.LineBasicMaterial({ color: 0x22c9ed, transparent: true, opacity: 0.8 })).copy(board).position.copy(board.position))
+  const boardEdges = new THREE.LineSegments(new THREE.EdgesGeometry(board.geometry), new THREE.LineBasicMaterial({ color: 0x22c9ed, transparent: true, opacity: 0.8 }))
+  boardEdges.position.copy(board.position)
+  boardGroup.add(boardEdges)
   for (let i = 0; i < 12; i++) {
     const trace = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.012, 2.15), new THREE.MeshBasicMaterial({ color: 0x0e7890, transparent: true, opacity: 0.38 }))
     trace.position.set(-2.05 + i * 0.37, -0.025, 0)
@@ -142,14 +151,16 @@ function onResize() {
 function animate() {
   animationId = requestAnimationFrame(animate)
   if (boardGroup && isLive.value) boardGroup.rotation.y = Math.sin(performance.now() * 0.00018) * 0.07
+  if (controls) controls.update()
   if (renderer && scene && camera) renderer.render(scene, camera)
 }
-function resetView() { if (camera && boardGroup) { camera.position.set(4.2, 3.2, 5.6); boardGroup.rotation.set(0, 0, 0) } }
+function resetView() { if (camera && boardGroup) { camera.position.set(4.2, 3.2, 5.6); boardGroup.rotation.set(0, 0, 0); controls?.target.set(0, 0.1, 0); controls?.update() } }
 function selectPart(id) { selectedPart.value = id }
 watch(showLabels, () => { if (scene) { disposeScene(); buildScene() } })
 function disposeScene() {
   if (animationId) cancelAnimationFrame(animationId)
   if (resizeObserver) resizeObserver.disconnect()
+  if (controls) controls.dispose()
   if (renderer) {
     renderer.domElement.removeEventListener('pointerdown', onSceneClick)
     renderer.dispose()
@@ -160,7 +171,7 @@ function disposeScene() {
     if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => { if (material.map) material.map.dispose(); material.dispose() })
   })
   interactiveMeshes.length = 0
-  renderer = scene = camera = boardGroup = null
+  renderer = scene = camera = controls = boardGroup = null
 }
 onMounted(buildScene)
 onBeforeUnmount(disposeScene)
