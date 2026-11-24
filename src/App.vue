@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import * as THREE from 'three'
 import LearningLibrary from './LearningLibrary.vue'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -234,6 +234,16 @@ function animate() {
 function resetView() { if (camera && boardGroup) { camera.position.set(4.2, 3.2, 5.6); boardGroup.rotation.set(0, 0, 0); controls?.target.set(0, 0.1, 0); controls?.update() } }
 function selectPart(id) { selectedPart.value = id }
 watch(showLabels, () => { if (scene) { disposeScene(); buildScene() } })
+watch(activeSection, async (section) => {
+  if (section === 'overview' || section === 'ecu-lab') {
+    await nextTick()
+    if (!renderer) buildScene()
+    else onResize()
+  } else {
+    disposeScene()
+    sceneReady.value = false
+  }
+})
 function disposeScene() {
   if (animationId) cancelAnimationFrame(animationId)
   if (resizeObserver) resizeObserver.disconnect()
